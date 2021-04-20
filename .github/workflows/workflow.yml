@@ -1,0 +1,256 @@
+name: "CI Workflow for \"GlucoLog\""
+
+on:
+  - push
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Any debug statement has no affect unless you set this to "true"
+  CI_DEBUG: false
+  PACKAGE_NAME: glucolog
+  PYTHON_VERSION: 3.8
+  BLACK_PY: py38
+  PIP_NOISE: "--quiet"
+  LINE_LENGTH: 88
+
+jobs:
+  # flake8 checks for best-practise Python programming
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: flake8
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install flake8 ${{ env.PIP_NOISE }}
+          info "Running 'flake8' over the '${{ env.PACKAGE_NAME }}' package..."
+          flake8 src tests --max-line-length ${{ env.LINE_LENGTH }}
+
+  # pydocstyle checks for best-practise Python code documentation/commenting
+  pydocstyle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: pydocstyle
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install pydocstyle ${{ env.PIP_NOISE }}
+          info "Running 'pydocstyle' over the '${{ env.PACKAGE_NAME }}' package..."
+          pydocstyle src tests
+
+  # black checks for de-facto best-practice Pytho codgint layout style
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: black
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install black ${{ env.PIP_NOISE }}
+          info "Running 'black' over the '${{ env.PACKAGE_NAME }}' package..."
+          black --target-version ${{ env.BLACK_PY }} --check --diff --color --line-length  ${{ env.LINE_LENGTH }} src tests
+
+  # mypy is used to check type annotations for validity
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: mypy
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install mypy ${{ env.PIP_NOISE }}
+          info "Running 'mypy' over the '${{ env.PACKAGE_NAME }}' package..."
+          mypy src/${{ env.PACKAGE_NAME }} --ignore-missing-imports
+
+  # Static analysis of this libraries code for security problems
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: bandit
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install bandit ${{ env.PIP_NOISE }}
+          mkdir --parents output/bandit
+          info "Checking for security problems in the ${PACKAGE_NAME} package."
+          bandit --aggregate file --recursive . --format html -ll --output output/bandit/report_medium_high.html
+
+  # Static analysis for known security problems in packages that this project depends on.
+  # It compares the dependent packages against https://github.com/pyupio/safety-db
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: safety
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install safety ${{ env.PIP_NOISE }}
+          info "Checking for security problems in the packages required by ${PACKAGE_NAME}."
+          safety check
+
+  # Ensure that you have updates all docs etc for the current version
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: version
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          VERSION=$(grep "version = " setup.cfg)
+          VERSION=${VERSION##*version = }
+          info "Checking for up-to-date CHANGELOG.md"
+          if ! grep "\[${VERSION}\]" CHANGELOG.md
+          then
+            error "Version '${VERSION}' not found in CHANGELOG.md"
+            exit 1
+          fi
+
+  # Test build the package
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: build
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install build virtualenv ${{ env.PIP_NOISE }}
+          info "Building the '${{ env.PACKAGE_NAME }}' package..."
+          python -m build
+
+  # Run tests using different target Python versions
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.8, 3.9 ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: test
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python --version
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install pytest pytest-cov mock ${{ env.PIP_NOISE }}
+          python -m pytest --cov src.${{ env.PACKAGE_NAME }} --cov-report term --cov-report html --cov-fail-under=100
+
+  # Test building documentation.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: docs
+        run: |
+          set -e +v
+          source .github/workflows/functions.sh
+          python --version
+          python -m pip install --upgrade pip ${{ env.PIP_NOISE }}
+          pip install -r requirements.txt ${{ env.PIP_NOISE }}
+          pip install sphinx ${{ env.PIP_NOISE }}
+          info "Creating documentation using sphinx..."
+          cd docs
+          make html
+
+  # ------------------------------------------------------------------------------------
+  # The following jobs only run for tagged releases, i.e. package releases that we want
+  # to publish.
+  #
+  # Ensure that the tag being used for a release matches the checked-in versions.
+  tag_check:
+    # Only runs for tagged releases.
+    if: ${{ contains(github.ref, 'refs/tags/') }}
+    # Only runs if all static analysis, build, test and docs jobs have passed.
+    needs:
+      [ flake8, black, pydocstyle, mypy, bandit, safety, versions, build, test, docs ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: tag check
+        run: |
+          info "GitHub CI ref slug is ${GITHUB_REF}"
+          NORMALISED_TAG=$(echo ${GITHUB_REF} | tr '-' '.')
+          info "Normalised GitHub ref slug is ${NORMALISED_TAG}"
+          VERSION=$(cat VERSION)
+          info "Checking that (normalised) tag and setup.py version match"
+          if [[ "${VERSION}" != "${NORMALISED_TAG}" ]
+          then
+            error "Normalised tag (${NORMALIZED_TAG})and setup.py (${VERSION}) do not match."
+            exit 1
+          fi
+
+  # Build and public the package and documentation.
+  publish:
+    # Only runs for tagged releases.
+    if: ${{ contains(github.ref, 'refs/tags/') }}
+    # Does not run unless the tag check has passed.
+    needs: [ tag_check ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: publish
+        run: |
+          source .github/workflows/functions.sh
+          info "Let's publish and be damned!"
+          debug "You should only see this if debugging is enabled."
