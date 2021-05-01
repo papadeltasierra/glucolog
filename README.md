@@ -20,6 +20,10 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+
+Common options:
+  Options which apply to all commands
+
   -v, --verbose         make the program more verbose
   -d, --debug           add debugging information to the log file
   -l LOGFILE, --logfile LOGFILE
@@ -29,8 +33,8 @@ optional arguments:
 ```
 Each command has additional options e.g.
 ```
-$ glucolog database_backup.dbglu columns --help
-usage: glucolog database columns [-h] -t TABLE
+$ glucolog database_backup.dbglu list-columns --help
+usage: glucolog database list-columns [-h] -t TABLE
 
 optional arguments:
   -h, --help            show this help message and exit

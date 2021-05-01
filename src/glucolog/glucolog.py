@@ -693,27 +693,30 @@ def parse_args(argv):
         prog=PROC_NAME,
         description="Tool to extract information from a GlucoLog back-up database",
     )
-    parser.add_argument(
+    common_group = parser.add_argument_group(
+        title="Common options", description="Options which apply to all commands"
+    )
+    common_group.add_argument(
         "-v",
         "--verbose",
         action="count",
         help="make the program more verbose",
         default=0,
     )
-    parser.add_argument(
+    common_group.add_argument(
         "-d",
         "--debug",
         action="count",
         help="add debugging information to the log file",
         default=0,
     )
-    parser.add_argument(
+    common_group.add_argument(
         "-l", "--logfile", help="specify log file name", default=default_logfile
     )
 
     if languages:
         # We have some languages so add the option.
-        parser.add_argument(
+        common_group.add_argument(
             "-x",
             "--xlat",
             type=str,
@@ -721,7 +724,7 @@ def parse_args(argv):
             help="language to translate to",
         )
 
-    parser.add_argument(
+    common_group.add_argument(
         "database",
         type=str,
         action="store",
