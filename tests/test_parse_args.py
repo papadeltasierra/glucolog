@@ -78,7 +78,17 @@ def test_pa_tables_minimal(capsys):
 def test_pa_tables_short(capsys):
     """Test maximal short options."""
     args = parse_args(
-        [PROC_NAME, "-vv", "-d", "-x", "it", "-l", "logfile.dat", "input.dat", "list-tables"]
+        [
+            PROC_NAME,
+            "-vv",
+            "-d",
+            "-x",
+            "it",
+            "-l",
+            "logfile.dat",
+            "input.dat",
+            "list-tables",
+        ]
     )
 
     assert args.verbose == 2
@@ -214,7 +224,9 @@ def test_pa_columns_long(capsys):
 def test_pa_export_missing_table(capsys):
     """Test export with missing output file."""
     with pytest.raises(SystemExit) as ee:
-        parse_args([PROC_NAME, "database.dat", "export-table", "-f", "excel", "output.dat"])
+        parse_args(
+            [PROC_NAME, "database.dat", "export-table", "-f", "excel", "output.dat"]
+        )
     assert ee.value.code == 2
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -225,7 +237,15 @@ def test_pa_export_missing_output(capsys):
     """Test export with missing output file."""
     with pytest.raises(SystemExit) as ee:
         parse_args(
-            [PROC_NAME, "database.dat", "export-table", "-t", "t_something", "-f", "csv"]
+            [
+                PROC_NAME,
+                "database.dat",
+                "export-table",
+                "-t",
+                "t_something",
+                "-f",
+                "csv",
+            ]
         )
     assert ee.value.code == 2
     captured = capsys.readouterr()
@@ -237,7 +257,14 @@ def test_pa_export_missing_format(capsys):
     """Test minimal short options."""
     with pytest.raises(SystemExit) as ee:
         parse_args(
-            [PROC_NAME, "database.dat", "export-table", "-t", "t_something", "output.dat"]
+            [
+                PROC_NAME,
+                "database.dat",
+                "export-table",
+                "-t",
+                "t_something",
+                "output.dat",
+            ]
         )
     assert ee.value.code == 2
     captured = capsys.readouterr()

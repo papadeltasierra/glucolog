@@ -32,7 +32,16 @@ def export_basic_validation(output: str, table: Dict, name: str) -> None:
 
 def test_export_minimal(db, csv, capsys):
     """Perform a minimal export."""
-    args = [PROC_NAME, db, "export-table", "--table", DB_TABLES[1], "--format", "csv", csv]
+    args = [
+        PROC_NAME,
+        db,
+        "export-table",
+        "--table",
+        DB_TABLES[1],
+        "--format",
+        "csv",
+        csv,
+    ]
     main(args)
 
     # We now need to perform some checking of the output file.
